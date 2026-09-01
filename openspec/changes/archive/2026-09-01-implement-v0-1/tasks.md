@@ -52,5 +52,5 @@
 
 - [x] 8.1 popup 视觉与文案：锁屏、金库树、选择器、设置、空状态、加载/错误态，中英文 i18n
 - [x] 8.2 更新 README：TypeScript 技术栈、权限、PBKDF2 迭代次数、待定决策落定
-- [ ] 8.3 `npm run build` 产出扩展包，Edge “Load unpacked” 手工验证核心流程
-- [ ] 8.4 修复验证中发现的问题并复测
+- [x] 8.3 `npm run build` 产出扩展包，Edge “Load unpacked” 手工验证核心流程
+- [x] 8.4 修复验证中发现的问题并复测
