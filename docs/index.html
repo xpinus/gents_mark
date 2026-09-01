@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>隐私政策 — Gents' Mark</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card-bg: #ffffff;
+      --text: #2c2c2c;
+      --text-secondary: #5a5a5a;
+      --accent: #1a1a1a;
+      --border: #e8e8e8;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --card-bg: #242424;
+        --text: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --accent: #f0f0f0;
+        --border: #333;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      padding: 40px 20px 80px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 48px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    .meta {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    h2:first-of-type { margin-top: 0; }
+    p, li { font-size: 15px; color: var(--text-secondary); }
+    p { margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text); }
+    a { color: #2563eb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .lang-switch {
+      text-align: right;
+      margin-bottom: 16px;
+    }
+    .lang-switch button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      margin-left: 8px;
+      transition: all 0.15s;
+    }
+    .lang-switch button:hover,
+    .lang-switch button.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    .zh, .en { display: none; }
+    .zh.show, .en.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="lang-switch">
+      <button id="btn-zh" class="active" onclick="switchLang('zh')">中文</button>
+      <button id="btn-en" onclick="switchLang('en')">English</button>
+    </div>
+
+    <!-- ==================== 中文 ==================== -->
+    <div class="zh show">
+      <div class="card">
+        <h1>🔒 隐私政策</h1>
+        <p class="meta">最后更新日期：2026 年 9 月 1 日</p>
+
+        <p>欢迎使用 <strong>Gents' Mark</strong>（以下简称"本扩展"）。我们深知隐私对您的重要性，因此本隐私政策将清晰、透明地说明本扩展如何处理您的数据。</p>
+
+        <h2>一、我们收集什么数据</h2>
+        <p><strong>本扩展不收集、不上传、不共享任何用户数据。</strong></p>
+        <p>具体而言：</p>
+        <ul>
+          <li>您的书签内容（包括 URL、标题、文件夹结构）<strong>仅存储在您的本地浏览器中</strong>。</li>
+          <li>您设置的主密码<strong>永远不离开您的设备</strong>，仅用于派生加密密钥。</li>
+          <li>本扩展<strong>不含任何分析 SDK、埋点代码或遥测机制</strong>。</li>
+          <li>本扩展<strong>不请求任何网络权限</strong>，无法也不会上传任何数据到远程服务器。</li>
+        </ul>
+
+        <h2>二、数据如何存储</h2>
+        <ul>
+          <li><strong>加密书签（金库数据）</strong>：使用 AES-256-GCM 加密后存储在 <code>chrome.storage.local</code> 中，仅存在于您的本地浏览器。</li>
+          <li><strong>会话密钥</strong>：解锁后临时存储在 <code>chrome.storage.session</code>（内存态），浏览器重启后自动清除。</li>
+          <li><strong>密码校验器</strong>：经 PBKDF2 派生（1,000,000 次迭代）的哈希值，仅用于验证密码正确性，无法反推出原始密码。</li>
+        </ul>
+        <p>所有加密操作均在您的设备本地完成，密钥永不离机。</p>
+
+        <h2>三、权限说明</h2>
+        <p>本扩展仅申请以下最小必要权限：</p>
+        <ul>
+          <li><strong>bookmarks</strong>：用于读取、加密隐藏和还原您的书签。</li>
+          <li><strong>storage</strong>：用于在本地存储加密后的金库数据。</li>
+          <li><strong>contextMenus</strong>：用于在网页右键菜单中提供"将当前页面锁入金库"选项。</li>
+          <li><strong>activeTab</strong>：用于获取当前网页的标题和 URL，以便将其加入金库。</li>
+        </ul>
+        <p>本扩展<strong>不申请任何网络相关权限</strong>（如 <code>*://*/*</code> host permissions、<code>webRequest</code> 等）。</p>
+
+        <h2>四、数据共享与披露</h2>
+        <p><strong>本扩展不与任何第三方共享任何数据。</strong></p>
+        <ul>
+          <li>我们不接入任何第三方服务、API 或云存储。</li>
+          <li>我们不出售、不交易、不转让您的任何信息。</li>
+          <li>在法律要求的情况下，我们可能披露数据，但由于我们不收集任何数据，实际上无可披露。</li>
+        </ul>
+
+        <h2>五、您的权利与控制</h2>
+        <p>您对自己的数据拥有完全的控制权：</p>
+        <ul>
+          <li>您可以随时通过扩展面板查看、还原或删除金库中的加密书签。</li>
+          <li>您可以通过卸载扩展来彻底清除所有本地数据（卸载后数据不可恢复）。</li>
+          <li>您可以在扩展面板中更改主密码。</li>
+        </ul>
+
+        <h2>六、儿童隐私</h2>
+        <p>本扩展不针对 13 岁以下儿童，也不会有意收集儿童的个人信息。由于我们不收集任何数据，因此不存在相关风险。</p>
+
+        <h2>七、政策更新</h2>
+        <p>我们可能会不时更新本隐私政策。更新后的政策将发布在此页面，并注明更新日期。建议您定期查看本页面以了解最新变更。</p>
+
+        <h2>八、联系我们</h2>
+        <p>如果您对本隐私政策有任何疑问或建议，欢迎通过以下方式联系我们：</p>
+        <ul>
+          <li>在项目的 <a href="https://github.com/xpinus/gents_mark/issues">GitHub Issues</a> 中提交问题</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ==================== English ==================== -->
+    <div class="en">
+      <div class="card">
+        <h1>🔒 Privacy Policy</h1>
+        <p class="meta">Last updated: September 1, 2026</p>
+
+        <p>Welcome to <strong>Gents' Mark</strong> ("the Extension"). We take your privacy seriously. This policy explains, in plain language, how the Extension handles your data.</p>
+
+        <h2>1. What Data We Collect</h2>
+        <p><strong>The Extension does not collect, upload, or share any user data.</strong></p>
+        <p>Specifically:</p>
+        <ul>
+          <li>Your bookmark content (URLs, titles, folder structures) is <strong>stored exclusively on your local browser</strong>.</li>
+          <li>Your master password <strong>never leaves your device</strong> and is used solely to derive encryption keys.</li>
+          <li>The Extension contains <strong>no analytics SDKs, tracking pixels, or telemetry</strong>.</li>
+          <li>The Extension <strong>requests no network permissions</strong> and cannot upload any data to remote servers.</li>
+        </ul>
+
+        <h2>2. How Data Is Stored</h2>
+        <ul>
+          <li><strong>Encrypted bookmarks (Vault data)</strong>: Encrypted with AES-256-GCM and stored in <code>chrome.storage.local</code>, residing only on your local browser.</li>
+          <li><strong>Session key</strong>: Temporarily held in <code>chrome.storage.session</code> (memory-only) after unlock, automatically cleared on browser restart.</li>
+          <li><strong>Password verifier</strong>: A PBKDF2-derived hash (1,000,000 iterations), used only to verify password correctness; the original password cannot be recovered from it.</li>
+        </ul>
+        <p>All cryptographic operations are performed locally on your device. Keys never leave your machine.</p>
+
+        <h2>3. Permission Justification</h2>
+        <p>The Extension requests only the following minimum necessary permissions:</p>
+        <ul>
+          <li><strong>bookmarks</strong>: To read, encrypt/hide, and restore your bookmarks.</li>
+          <li><strong>storage</strong>: To store encrypted vault data locally.</li>
+          <li><strong>contextMenus</strong>: To provide a "Lock current page into vault" option in the right-click menu.</li>
+          <li><strong>activeTab</strong>: To retrieve the current page's title and URL for vaulting.</li>
+        </ul>
+        <p>The Extension requests <strong>no network-related permissions</strong> (e.g., <code>*://*/*</code> host permissions, <code>webRequest</code>, etc.).</p>
+
+        <h2>4. Data Sharing & Disclosure</h2>
+        <p><strong>The Extension shares no data with any third party.</strong></p>
+        <ul>
+          <li>We do not integrate with any third-party services, APIs, or cloud storage.</li>
+          <li>We do not sell, trade, or transfer any of your information.</li>
+          <li>We may disclose data if required by law, but since we collect no data, there is nothing to disclose.</li>
+        </ul>
+
+        <h2>5. Your Rights & Control</h2>
+        <p>You have full control over your data:</p>
+        <ul>
+          <li>You can view, restore, or delete encrypted bookmarks in the vault at any time via the extension popup.</li>
+          <li>You can uninstall the Extension to permanently remove all local data (data is unrecoverable after uninstallation).</li>
+          <li>You can change your master password via the extension popup.</li>
+        </ul>
+
+        <h2>6. Children's Privacy</h2>
+        <p>The Extension is not directed at children under 13, nor does it knowingly collect personal information from children. Since we collect no data, there is no associated risk.</p>
+
+        <h2>7. Policy Updates</h2>
+        <p>We may update this privacy policy from time to time. The updated policy will be posted on this page with a revised date. We encourage you to review this page periodically.</p>
+
+        <h2>8. Contact Us</h2>
+        <p>If you have any questions or suggestions about this privacy policy, feel free to reach out:</p>
+        <ul>
+          <li>Open an issue on <a href="https://github.com/xpinus/gents_mark/issues">GitHub Issues</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('show'));
+      document.querySelector('.' + lang).classList.add('show');
+      document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    }
+  </script>
+</body>
+</html>

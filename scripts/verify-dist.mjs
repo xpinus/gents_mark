@@ -21,7 +21,7 @@ const sourceFiles = ['src/popup/main.ts', 'src/background/index.ts'];
 const used = new Set();
 for (const file of sourceFiles) {
   const text = fs.readFileSync(path.resolve(file), 'utf8');
-  const pattern = /(?:t|tArgs|getMessage)\(['"]([^'"]+)['"]/g;
+  const pattern = /\b(?:t|tArgs|getMessage)\(['"]([^'"]+)['"]/g;
   for (const match of text.matchAll(pattern)) {
     used.add(match[1]);
   }

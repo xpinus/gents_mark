@@ -19,6 +19,14 @@ import {
 } from '../lib/vault';
 import type { DecryptedVaultItem, PendingBookmark, VaultDocument } from '../lib/types';
 import { PENDING_KEY, SESSION_STORAGE_KEY } from '../lib/types';
+import lockSvgRaw from './icons/lock.svg?raw';
+import unlockSvgRaw from './icons/unlock.svg?raw';
+import importSvgRaw from './icons/import.svg?raw';
+import exportSvgRaw from './icons/export.svg?raw';
+import addSvgRaw from './icons/add.svg?raw';
+import tipSvgRaw from './icons/tip.svg?raw';
+import emptySvgRaw from './icons/empty.svg?raw';
+import syncSvgRaw from './icons/sync.svg?raw';
 
 const app = document.getElementById('app')!;
 
@@ -27,6 +35,16 @@ let key: CryptoKey | null = null;
 let decrypted: DecryptedVaultItem[] = [];
 let autoLockCheck: number | undefined;
 let pickerTree: BookmarkTreeNode[] = [];
+
+function svgIcon(raw: string, className?: string): SVGSVGElement {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = raw;
+  const svg = wrapper.firstElementChild as SVGSVGElement;
+  if (className) svg.classList.add(className);
+  svg.removeAttribute('width');
+  svg.removeAttribute('height');
+  return svg;
+}
 
 function h<T extends HTMLElement>(tag: string, className?: string, text?: string): T {
   const el = document.createElement(tag) as T;
@@ -109,6 +127,22 @@ async function checkAutoLock(): Promise<void> {
   }
 }
 
+
+async function syncVault(): Promise<void> {
+  if (!doc) return;
+  const raw = JSON.stringify(doc);
+  const bytes = new TextEncoder().encode(raw);
+  if (bytes.length > 102400) {
+    showToast(t('syncTooLarge'), true);
+    return;
+  }
+  try {
+    await chrome.storage.sync.set({ vault: raw });
+    showToast(t('syncSuccess'));
+  } catch (error) {
+    showToast(`${t('syncFailed')}: ${String(error)}`, true);
+  }
+}
 async function lockVault(): Promise<void> {
   stopAutoLock();
   key = null;
@@ -148,10 +182,10 @@ async function setupVault(password: string): Promise<void> {
 function renderSetup(): void {
   clearApp();
   const card = h('div', 'auth-card');
-  card.append(h('h1', 'title', t('setupTitle')), h('p', 'subtitle', t('setupSubtitle')));
+  card.append(h('h1', 'title', t('setupTitle')));
 
   const passField = h('div', 'field');
-  passField.append(h('label', undefined, t('newPassword')));
+  passField.append(h('label', undefined, t('setupSubtitle')));
   const pass = h<HTMLInputElement>('input');
   pass.type = 'password';
   passField.append(pass);
@@ -200,9 +234,10 @@ function renderSetup(): void {
 function renderLocked(): void {
   clearApp();
   const card = h('div', 'auth-card');
-  card.append(h('h1', 'title', t('unlockTitle')), h('p', 'subtitle', t('unlockSubtitle')));
+  const lockIcon = svgIcon(unlockSvgRaw, 'lock-icon');
+  card.append(lockIcon, h('h1', 'title', t('unlockTitle')));
   const field = h('div', 'field');
-  field.append(h('label', undefined, t('passwordPlaceholder')));
+  field.append(h('label', undefined, t('unlockSubtitle')));
   const pass = h<HTMLInputElement>('input');
   pass.type = 'password';
   pass.placeholder = t('passwordPlaceholder');
@@ -236,7 +271,7 @@ function renderList(query: string): HTMLElement {
   const items = filterVaultItems(decrypted, query);
   if (items.length === 0) {
     const empty = h('div', 'empty');
-    empty.append(h('div', 'empty-icon', '🎩'), h('div', undefined, t('emptyVault')), h('div', undefined, t('emptyVaultHint')));
+    empty.append(svgIcon(emptySvgRaw, 'empty-icon'), h('div', undefined, t('emptyVault')), h('div', undefined, t('emptyVaultHint')));
     list.append(empty);
     return list;
   }
@@ -319,15 +354,28 @@ function renderMain(): void {
 
   const header = h('div', 'header');
   const brand = h('div', 'brand');
-  brand.append(h('span', 'dot'), h('span', undefined, t('vaultTitle')));
-  const lock = h('button', 'ghost', t('lockNow'));
-  lock.addEventListener('click', () => void lockVault());
-  header.append(brand, lock);
+  brand.append(h('span', undefined, t('vaultTitle')));
+  const lock = h<HTMLButtonElement>('button', 'ghost');
+  lock.append(svgIcon(lockSvgRaw, 'lock-btn-icon'));
+  lock.append(t('lockNow'));
+  lock.addEventListener('click', async () => { await lockVault(); window.close(); });
+
+  const syncBtn = h<HTMLButtonElement>('button', 'ghost');
+  syncBtn.append(svgIcon(syncSvgRaw, 'lock-btn-icon'));
+  syncBtn.append(t('sync'));
+  syncBtn.addEventListener('click', () => void syncVault());
+  header.append(brand, syncBtn, lock);
 
   const toolbar = h('div', 'toolbar');
-  const pickerButton = h('button', 'primary', t('lockBookmarks'));
-  const exportButton = h('button', undefined, t('exportBackup'));
-  const importButton = h('button', undefined, t('importBackup'));
+  const pickerButton = h<HTMLButtonElement>('button', 'primary');
+  pickerButton.append(svgIcon(addSvgRaw, 'toolbar-icon'));
+  pickerButton.append(t('addBookmarks'));
+  const exportButton = h<HTMLButtonElement>('button');
+  exportButton.append(svgIcon(exportSvgRaw, 'toolbar-icon'));
+  exportButton.append(t('exportBackup'));
+  const importButton = h<HTMLButtonElement>('button');
+  importButton.append(svgIcon(importSvgRaw, 'toolbar-icon'));
+  importButton.append(t('importBackup'));
   const fileInput = h<HTMLInputElement>('input');
   fileInput.type = 'file';
   fileInput.accept = '.json,application/json';
@@ -340,9 +388,10 @@ function renderMain(): void {
   searchInput.placeholder = t('searchPlaceholder');
   search.append(searchInput);
 
-  const listHost = h('div');
+  const listHost = h('div', 'list-host');
 
-  const footer = h('div', 'footer', `${t('settingsTitle')} · ${t('autoLockHint')}`);
+  const footer = h('div', 'footer');
+  footer.append(svgIcon(tipSvgRaw, 'footer-icon'), t('autoLockHint'));
 
   root.append(header, toolbar, search, listHost, footer, fileInput);
   app.append(root);
@@ -421,20 +470,28 @@ async function openPicker(): Promise<void> {
   const tree = await getBookmarkTree();
   pickerTree = tree[0]?.children ?? [];
   const selected = new Set<string>();
-  const modal = h('div', 'modal');
-  modal.append(h('h2', 'modal-title', t('pickerTitle')), h('p', 'modal-subtitle', t('pickerSubtitle')));
+  const picker = h('div', 'picker-modal');
+  const headerEl = h('div', 'picker-header');
+  headerEl.append(h('h2', 'modal-title', t('pickerTitle')), h('p', 'modal-subtitle', t('pickerSubtitle')));
   const search = h<HTMLInputElement>('input');
   search.type = 'text';
   search.placeholder = t('searchPlaceholder');
-  modal.append(search);
+  headerEl.append(search);
+  picker.append(headerEl);
+
+  const body = h('div', 'picker-body');
   const treeHost = h('div', 'picker-tree');
-  const actions = h('div', 'modal-actions');
+  body.append(treeHost);
+  picker.append(body);
+
+  const footerEl = h('div', 'picker-footer');
   const cancel = h('button', undefined, t('cancel'));
   const confirm = h<HTMLButtonElement>('button', 'primary', t('lockSelected'));
   confirm.disabled = true;
-  actions.append(cancel, confirm);
-  modal.append(treeHost, actions);
-  const overlay = openModal(modal);
+  footerEl.append(cancel, confirm);
+  picker.append(footerEl);
+
+  app.append(picker);
 
   const renderTree = (): void => {
     const query = search.value;
@@ -446,7 +503,7 @@ async function openPicker(): Promise<void> {
   renderTree();
   search.addEventListener('input', renderTree);
 
-  cancel.addEventListener('click', () => overlay.remove());
+  cancel.addEventListener('click', () => picker.remove());
   confirm.addEventListener('click', async () => {
     const nodes = collectSelectedNodes(pickerTree, selected);
     if (nodes.length === 0) return;
@@ -454,7 +511,7 @@ async function openPicker(): Promise<void> {
       const results = await lockNativeNodes(doc!, key!, pickerTree, nodes);
       const failed = results.filter((result) => !result.ok);
       decrypted = await decryptVaultItems(doc!, key!);
-      overlay.remove();
+      picker.remove();
       renderMain();
       if (failed.length === 0) {
         showToast(tArgs('lockedCount', [String(results.length)]));
@@ -519,6 +576,18 @@ function render(): void {
 
 async function init(): Promise<void> {
   doc = await loadDocument();
+  if (!doc) {
+    const result = await chrome.storage.sync.get('vault');
+    if (result.vault && typeof result.vault === 'string') {
+      try {
+        const parsed = JSON.parse(result.vault);
+        if (parsed && parsed.items && parsed.encryptionSalt) {
+          doc = parsed as VaultDocument;
+          await saveDocument(doc);
+        }
+      } catch { /* invalid sync data */ }
+    }
+  }
   const session = await getSession();
   if (doc && session && !isSessionExpired(session)) {
     try {
