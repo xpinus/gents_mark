@@ -21,7 +21,8 @@
 
 ## 🚀 快速上手
 
-1. 从 Edge 扩展商店安装 Gents' Mark（链接待补充）。
+1. 从 Edge 扩展商店安装 [Gents' Mark](
+https://microsoftedge.microsoft.com/addons/detail/daibgdliohaajphcjpkckglmhmnompgm)。
 2. 点击浏览器工具栏中的 🎩 图标，设置你的**主密码**（请务必牢记，密码无法找回）。
 3. 打开扩展面板，在 **书签选择器** 中勾选想要保护的文件夹或书签，点击 **"移入金库"**；也可以在网页上右键选择 **"将当前页面锁入金库"**。
 4. 需要查看时，点击 🎩 图标，输入密码即可浏览你的珍藏。
