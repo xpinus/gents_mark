@@ -111,6 +111,83 @@ export async function deleteVaultItem(doc: VaultDocument, itemId: string): Promi
   await saveDocument(doc);
 }
 
+
+export async function restoreVaultChildNode(
+  doc: VaultDocument,
+  key: CryptoKey,
+  parentId: string,
+  childPath: number[]
+): Promise<void> {
+  const index = doc.items.findIndex((item) => item.id === parentId);
+  if (index === -1) throw new Error('Vault item not found');
+  const item = doc.items[index]!;
+  const plain = await decryptText(key, item.payload);
+  const root = JSON.parse(plain) as VaultNode;
+
+  // Navigate to the child
+  let parent: VaultNode = root;
+  let target: VaultNode = root;
+  for (const idx of childPath) {
+    parent = target;
+    target = parent.children![idx]!;
+  }
+
+  // Restore just this child to native bookmarks
+  const bookmarkTree = await getBookmarkTree();
+  const topLevel = bookmarkTree[0]?.children ?? [];
+  let parentId2: string | null = null;
+  if (target.parentPath && target.parentPath.length > 0) {
+    parentId2 = await resolveParentId(topLevel, target.parentPath);
+  }
+  if (!parentId2) {
+    parentId2 = await ensureVaultFolder(topLevel);
+  }
+  await createSubtree(parentId2, target);
+
+  // Remove child from parent's children array
+  if (parent.children) {
+    parent.children.splice(childPath[childPath.length - 1]!, 1);
+  }
+
+  // Re-encrypt and save
+  const payload = await encryptText(key, JSON.stringify(root));
+  const newItem: VaultItem = { id: item.id, createdAt: item.createdAt, payload };
+  doc.items[index] = newItem;
+  await saveDocument(doc);
+}
+
+export async function deleteVaultChildNode(
+  doc: VaultDocument,
+  key: CryptoKey,
+  parentId: string,
+  childPath: number[]
+): Promise<void> {
+  const index = doc.items.findIndex((item) => item.id === parentId);
+  if (index === -1) throw new Error('Vault item not found');
+  const item = doc.items[index]!;
+  const plain = await decryptText(key, item.payload);
+  const root = JSON.parse(plain) as VaultNode;
+
+  // Navigate to the parent of the target
+  let parent: VaultNode = root;
+  let target: VaultNode = root;
+  for (const idx of childPath) {
+    parent = target;
+    target = parent.children![idx]!;
+  }
+
+  // Remove child from parent's children array
+  if (parent.children) {
+    parent.children.splice(childPath[childPath.length - 1]!, 1);
+  }
+
+  // Re-encrypt and save
+  const payload = await encryptText(key, JSON.stringify(root));
+  const newItem: VaultItem = { id: item.id, createdAt: item.createdAt, payload };
+  doc.items[index] = newItem;
+  await saveDocument(doc);
+}
+
 export async function openVaultUrl(url: string): Promise<void> {
   await chrome.tabs.create({ url });
 }

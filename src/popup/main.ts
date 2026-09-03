@@ -10,6 +10,8 @@ import {
   addUrlToVault,
   decryptVaultItems,
   deleteVaultItem,
+  deleteVaultChildNode,
+  restoreVaultChildNode,
   filterVaultItems,
   loadDocument,
   lockNativeNodes,
@@ -17,7 +19,7 @@ import {
   restoreVaultItem,
   saveDocument
 } from '../lib/vault';
-import type { DecryptedVaultItem, PendingBookmark, VaultDocument } from '../lib/types';
+import type { DecryptedVaultItem, PendingBookmark, VaultDocument, VaultNode } from '../lib/types';
 import { PENDING_KEY, SESSION_STORAGE_KEY } from '../lib/types';
 import lockSvgRaw from './icons/lock.svg?raw';
 import unlockSvgRaw from './icons/unlock.svg?raw';
@@ -27,6 +29,9 @@ import addSvgRaw from './icons/add.svg?raw';
 import tipSvgRaw from './icons/tip.svg?raw';
 import emptySvgRaw from './icons/empty.svg?raw';
 import syncSvgRaw from './icons/sync.svg?raw';
+import openSvgRaw from './icons/open.svg?raw';
+import restoreSvgRaw from './icons/restore.svg?raw';
+import deleteSvgRaw from './icons/delete.svg?raw';
 
 const app = document.getElementById('app')!;
 
@@ -282,22 +287,32 @@ function renderList(query: string): HTMLElement {
 }
 
 function renderVaultItem(item: DecryptedVaultItem): HTMLElement {
-  const row = h('div', 'vault-item');
-  const icon = h('div', 'icon', item.node.kind === 'folder' ? '▸' : '↗');
+  const container = h('div');
+
+  const isFolder = item.node.kind === 'folder';
+  const row = h('div', isFolder ? 'vault-item vault-folder' : 'vault-item');
+  const hasChildren = isFolder && (item.node.children?.length ?? 0) > 0;
+
+  const chevron = h<HTMLButtonElement>('button', 'ghost vault-chevron', hasChildren ? '▾' : '▸');
+  chevron.style.padding = '0 2px';
+  chevron.style.display = hasChildren ? '' : 'none';
+
   const body = h('div', 'body');
   body.append(h('div', 'name', item.node.title || item.node.url || ''));
-  if (item.node.url) {
+  if (!isFolder && item.node.url) {
     body.append(h('div', 'meta', item.node.url));
-  } else {
-    body.append(h('div', 'meta', `${t('vaultTitle')} · ${item.node.children?.length ?? 0}`));
   }
   const actions = h('div', 'actions');
   if (item.node.kind === 'bookmark' && item.node.url) {
-    const open = h('button', undefined, t('open'));
+    const open = h('button', undefined);
+    open.title = t('open');
+    open.append(svgIcon(openSvgRaw, 'action-icon'));
     open.addEventListener('click', () => void openVaultUrl(item.node.url!));
     actions.append(open);
   }
-  const restore = h('button', undefined, t('restore'));
+  const restore = h('button', undefined);
+  restore.title = t('restore');
+  restore.append(svgIcon(restoreSvgRaw, 'action-icon'));
   restore.addEventListener('click', () => {
     confirmDialog(t('restore'), t('restoreConfirm'), t('restore'), async () => {
       if (!doc || !key) return;
@@ -306,7 +321,9 @@ function renderVaultItem(item: DecryptedVaultItem): HTMLElement {
       renderMain();
     });
   });
-  const remove = h('button', 'danger', t('delete'));
+  const remove = h('button', 'danger');
+  remove.title = t('delete');
+  remove.append(svgIcon(deleteSvgRaw, 'action-icon'));
   remove.addEventListener('click', () => {
     confirmDialog(t('delete'), t('deleteConfirm'), t('delete'), async () => {
       if (!doc) return;
@@ -316,8 +333,102 @@ function renderVaultItem(item: DecryptedVaultItem): HTMLElement {
     });
   });
   actions.append(restore, remove);
-  row.append(icon, body, actions);
-  return row;
+  if (isFolder) {
+    row.append(chevron, body, actions);
+  } else {
+    row.append(chevron, body, actions);
+  }
+  container.append(row);
+
+  if (hasChildren) {
+    const childrenHost = h('div', 'vault-children');
+    childrenHost.hidden = false;
+    for (let i = 0; i < item.node.children!.length; i++) {
+      childrenHost.append(renderVaultChild(item.node.children![i]!, 1, item.id, [i]));
+    }
+    container.append(childrenHost);
+
+    chevron.addEventListener('click', () => {
+      childrenHost.hidden = !childrenHost.hidden;
+      chevron.textContent = childrenHost.hidden ? '▸' : '▾';
+    });
+  }
+
+  return container;
+}
+
+function renderVaultChild(node: VaultNode, depth: number, parentId: string, childPath: number[]): HTMLElement {
+  const isFolder = node.kind === 'folder';
+  const row = h('div', isFolder ? 'vault-item vault-child vault-folder' : 'vault-item vault-child');
+  row.style.paddingLeft = `${8 + depth * 16}px`;
+
+  const hasGrandchildren = isFolder && (node.children?.length ?? 0) > 0;
+  const chevron = h<HTMLButtonElement>('button', 'ghost vault-chevron', hasGrandchildren ? '▾' : '▸');
+  chevron.style.padding = '0 2px';
+  chevron.style.minWidth = '20px';
+  chevron.style.display = hasGrandchildren ? '' : 'none';
+
+  const body = h('div', 'body');
+  body.append(h('div', 'name', node.title || node.url || ''));
+  if (!isFolder && node.url) {
+    body.append(h('div', 'meta', node.url));
+  }
+
+  const actions = h('div', 'actions');
+  if (node.kind === 'bookmark' && node.url) {
+    const open = h('button', undefined);
+    open.title = t('open');
+    open.append(svgIcon(openSvgRaw, 'action-icon'));
+    open.addEventListener('click', () => void openVaultUrl(node.url!));
+    actions.append(open);
+  }
+  const restore = h('button', undefined);
+  restore.title = t('restore');
+  restore.append(svgIcon(restoreSvgRaw, 'action-icon'));
+  restore.addEventListener('click', () => {
+    confirmDialog(t('restore'), t('restoreConfirm'), t('restore'), async () => {
+      if (!doc || !key) return;
+      await restoreVaultChildNode(doc, key, parentId, childPath);
+      decrypted = await decryptVaultItems(doc, key);
+      renderMain();
+    });
+  });
+  const remove = h('button', 'danger');
+  remove.title = t('delete');
+  remove.append(svgIcon(deleteSvgRaw, 'action-icon'));
+  remove.addEventListener('click', () => {
+    confirmDialog(t('delete'), t('deleteConfirm'), t('delete'), async () => {
+      if (!doc) return;
+      await deleteVaultChildNode(doc, key!, parentId, childPath);
+      decrypted = await decryptVaultItems(doc, key!);
+      renderMain();
+    });
+  });
+  actions.append(restore, remove);
+  if (isFolder) {
+    row.append(chevron, body, actions);
+  } else {
+    row.append(chevron, body, actions);
+  }
+
+  const container = h('div');
+  container.append(row);
+
+  if (hasGrandchildren) {
+    const childrenHost = h('div', 'vault-children');
+    childrenHost.hidden = true;
+    for (let i = 0; i < node.children!.length; i++) {
+      childrenHost.append(renderVaultChild(node.children![i]!, depth + 1, parentId, [...childPath, i]));
+    }
+    container.append(childrenHost);
+
+    chevron.addEventListener('click', () => {
+      childrenHost.hidden = !childrenHost.hidden;
+      chevron.textContent = childrenHost.hidden ? '▸' : '▾';
+    });
+  }
+
+  return container;
 }
 
 function renderPendingBanner(pending: PendingBookmark | null): HTMLElement | null {
@@ -364,7 +475,9 @@ function renderMain(): void {
   syncBtn.append(svgIcon(syncSvgRaw, 'lock-btn-icon'));
   syncBtn.append(t('sync'));
   syncBtn.addEventListener('click', () => void syncVault());
-  header.append(brand, syncBtn, lock);
+  const headerRight = h('div', 'header-right');
+  headerRight.append(syncBtn, lock);
+  header.append(brand, headerRight);
 
   const toolbar = h('div', 'toolbar');
   const pickerButton = h<HTMLButtonElement>('button', 'primary');
@@ -498,6 +611,7 @@ async function openPicker(): Promise<void> {
     const visible = query.trim() ? filterTree(pickerTree, query) : pickerTree;
     treeHost.replaceChildren(...visible.map((node) => renderPickerNode(node, 0, selected, () => {
       confirm.disabled = selected.size === 0;
+      renderTree();
     })));
   };
   renderTree();
