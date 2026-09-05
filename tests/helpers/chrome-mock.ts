@@ -31,8 +31,10 @@ export function createStorageArea(store: Record<string, unknown> = {}) {
 export function installChromeMock(options: { initialRoots?: MockNode[] } = {}) {
   const localStore: Record<string, unknown> = {};
   const sessionStore: Record<string, unknown> = {};
+  const syncStore: Record<string, unknown> = {};
   const local = createStorageArea(localStore);
   const session = createStorageArea(sessionStore);
+  const sync = createStorageArea(syncStore);
   const roots: MockNode[] = options.initialRoots ?? [
     { id: '1', title: 'Bookmarks bar', dateAdded: 1, children: [] },
     { id: '2', title: 'Other bookmarks', dateAdded: 2, children: [] },
@@ -92,6 +94,7 @@ export function installChromeMock(options: { initialRoots?: MockNode[] } = {}) {
     storage: {
       local,
       session,
+      sync,
       onChanged: { addListener: vi.fn() }
     },
     bookmarks,
@@ -117,5 +120,5 @@ export function installChromeMock(options: { initialRoots?: MockNode[] } = {}) {
   };
 
   (globalThis as Record<string, unknown>).chrome = chromeMock;
-  return { chrome: chromeMock, localStore, sessionStore, roots };
+  return { chrome: chromeMock, localStore, sessionStore, syncStore, roots };
 }

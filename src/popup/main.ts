@@ -1,5 +1,6 @@
 import { createSession, createVaultDocument, deriveEncryptionKey, restoreKey, verifyPassword } from '../lib/crypto';
 import { downloadBackup, importBackup, parseBackup } from '../lib/backup';
+import { mergeVaultDocuments, pullSyncedVault, pushSyncedVault, sameVaultMaster } from '../lib/sync';
 import { clearSession, getSession, isSessionExpired, setSession, touchActivity } from '../lib/session';
 import { fromBase64 } from '../lib/secure-utils';
 import { getBookmarkTree } from '../lib/bookmarks';
@@ -135,17 +136,126 @@ async function checkAutoLock(): Promise<void> {
 
 async function syncVault(): Promise<void> {
   if (!doc) return;
-  const raw = JSON.stringify(doc);
-  const bytes = new TextEncoder().encode(raw);
-  if (bytes.length > 102400) {
-    showToast(t('syncTooLarge'), true);
-    return;
-  }
   try {
-    await chrome.storage.sync.set({ vault: raw });
+    const remote = await pullSyncedVault();
+    if (remote) {
+      if (!sameVaultMaster(doc, remote)) {
+        showSyncConflictModal(remote);
+        return;
+      }
+      const merged = mergeVaultDocuments(doc, remote);
+      if (merged.items.length !== doc.items.length) {
+        doc = merged;
+        await saveDocument(doc);
+      }
+    }
+    await pushSyncedVault(doc);
+    if (key) {
+      decrypted = await decryptVaultItems(doc, key);
+      renderMain();
+    }
     showToast(t('syncSuccess'));
   } catch (error) {
     showToast(`${t('syncFailed')}: ${String(error)}`, true);
+  }
+}
+
+function showSyncConflictModal(remote: VaultDocument): void {
+  const modal = h('div', 'modal');
+  modal.append(h('h2', 'modal-title', t('sync')), h('p', 'modal-subtitle', t('syncConflict')));
+  const actions = h('div', 'modal-actions');
+  const cancel = h('button', undefined, t('cancel'));
+  const keepLocal = h<HTMLButtonElement>('button', 'primary', t('syncKeepLocal'));
+  const useCloud = h<HTMLButtonElement>('button', undefined, t('syncUseCloud'));
+  actions.append(keepLocal, useCloud, cancel);
+  modal.append(actions);
+  const overlay = openModal(modal);
+
+  cancel.addEventListener('click', () => overlay.remove());
+  keepLocal.addEventListener('click', async () => {
+    keepLocal.disabled = true;
+    try {
+      if (doc) await pushSyncedVault(doc);
+      overlay.remove();
+      showToast(t('syncSuccess'));
+    } catch (error) {
+      showToast(`${t('syncFailed')}: ${String(error)}`, true);
+      keepLocal.disabled = false;
+    }
+  });
+  useCloud.addEventListener('click', () => {
+    overlay.remove();
+    showCloudPasswordPrompt(remote);
+  });
+}
+
+function showCloudPasswordPrompt(remote: VaultDocument): void {
+  const modal = h('div', 'modal');
+  modal.append(h('h2', 'modal-title', t('syncUseCloud')), h('p', 'modal-subtitle', t('syncCloudPrompt')));
+  const pass = h<HTMLInputElement>('input');
+  pass.type = 'password';
+  modal.append(pass);
+  const actions = h('div', 'modal-actions');
+  const cancel = h('button', undefined, t('cancel'));
+  const submit = h<HTMLButtonElement>('button', 'primary', t('unlock'));
+  actions.append(cancel, submit);
+  modal.append(actions);
+  const overlay = openModal(modal);
+
+  cancel.addEventListener('click', () => overlay.remove());
+  submit.addEventListener('click', async () => {
+    submit.disabled = true;
+    try {
+      const valid = await verifyPassword(pass.value, remote);
+      if (!valid) {
+        showToast(t('wrongPassword'), true);
+        submit.disabled = false;
+        return;
+      }
+      doc = remote;
+      key = await deriveEncryptionKey(pass.value, fromBase64(doc.encryptionSalt), doc.keyIterations);
+      await setSession(await createSession(pass.value, doc));
+      await saveDocument(doc);
+      await pushSyncedVault(doc);
+      decrypted = await decryptVaultItems(doc, key);
+      overlay.remove();
+      renderMain();
+      showToast(t('syncSuccess'));
+    } catch (error) {
+      showToast(`${t('syncFailed')}: ${String(error)}`, true);
+      submit.disabled = false;
+    }
+  });
+}
+
+async function applyCloudSync(): Promise<void> {
+  let remote: VaultDocument | null = null;
+  try {
+    remote = await pullSyncedVault();
+  } catch {
+    return;
+  }
+  if (!remote) return;
+  if (!doc) {
+    doc = remote;
+    await saveDocument(doc);
+    try {
+      await pushSyncedVault(doc);
+    } catch {
+      // Best-effort migration of the legacy single-key format.
+    }
+    return;
+  }
+  if (!sameVaultMaster(doc, remote)) return;
+  const merged = mergeVaultDocuments(doc, remote);
+  if (merged.items.length !== doc.items.length) {
+    doc = merged;
+    await saveDocument(doc);
+    try {
+      await pushSyncedVault(doc);
+    } catch {
+      // Local merge is still valid even if the cloud write fails.
+    }
   }
 }
 async function lockVault(): Promise<void> {
@@ -690,18 +800,7 @@ function render(): void {
 
 async function init(): Promise<void> {
   doc = await loadDocument();
-  if (!doc) {
-    const result = await chrome.storage.sync.get('vault');
-    if (result.vault && typeof result.vault === 'string') {
-      try {
-        const parsed = JSON.parse(result.vault);
-        if (parsed && parsed.items && parsed.encryptionSalt) {
-          doc = parsed as VaultDocument;
-          await saveDocument(doc);
-        }
-      } catch { /* invalid sync data */ }
-    }
-  }
+  await applyCloudSync();
   const session = await getSession();
   if (doc && session && !isSessionExpired(session)) {
     try {

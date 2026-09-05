@@ -10,7 +10,7 @@
 
 > Current status: core features are implemented. Build output is in `dist/`. Load it as an unpacked extension in Edge to try it out.
 
-> ⚠️ **Important**: Uninstalling the extension will delete all local vault data, causing permanent loss of your bookmarks. Please **export a backup** or **click the Sync button** to sync the vault to the cloud before uninstalling. After reinstalling, you can restore via import or automatic cloud recovery.
+> ⚠️ **Important**: Uninstalling the extension deletes all of its own storage, including `chrome.storage.sync` data, causing permanent loss of your bookmarks. Please **export a backup** before uninstalling. Cloud sync only shares data between devices that still have the extension installed; it is not a backup for uninstalls.
 
 ## ✨ Core Features
 
@@ -97,10 +97,13 @@
 
 ### Optional Sync
 
-- Manually triggered: writes the entire vault document JSON to `chrome.storage.sync`, syncing across devices via your Edge account
-- Password and session keys are never synced; other devices must install the same extension and enter the same master password to unlock
-- Quota: ~100KB total; the extension warns if the vault exceeds this limit. Suitable for small-to-medium bookmark collections
-- Auto-detection on first launch: if sync contains vault data and no local vault exists, it is pulled and restored
+- Manually triggered: the encrypted vault document is chunked into `chrome.storage.sync`, staying under the 8KB per-item quota
+- Auto-pull: opening the popup reads cloud data; a fresh device restores the vault, and devices sharing the same master password merge new items automatically
+- Password and session keys are never synced; other devices must install the same extension, sign in to the same Edge account, and enter the same master password to unlock
+- Vaults with different master passwords are never force-merged; the UI asks you to align passwords first
+- Quota: roughly 90KB of chunked data can sync; larger vaults are rejected with a warning
+- Edge requirement: sign in to Edge and enable "Extensions" under Settings > Profiles > Sync
+- Deletions are not tombstoned, so an older cloud copy can bring an item back after a merge; delete items on both devices in the same sync round
 
 ### Backup & Restore
 
