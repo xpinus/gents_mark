@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Commit Lint"
+  short_description: "约束 git commit 格式（Gitmoji + Conventional Commits）"
+  default_prompt: "校验 commit message 格式（Gitmoji + Conventional Commits），或帮项目安装 commit-msg hook。"

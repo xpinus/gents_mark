@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "git-commit-lint": {
+      "source": "xpinus/git-commit-lint",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit-lint/SKILL.md",
+      "computedHash": "9761970667e5f85f24b4d310f7149686ca893d8dd8a93da7e4624e05373998ac"
+    },
+    "git-commit-lint-init": {
+      "source": "xpinus/git-commit-lint",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit-lint-init/SKILL.md",
+      "computedHash": "42dac102f7ea7621b17c205ec1f14883c5f77fbe6aed911d805e6a031d371a5a"
+    }
+  }
+}

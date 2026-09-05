@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Commit Lint Init"
+  short_description: "在项目中初始化 git-commit-lint hook 和脚本"
+  default_prompt: "为此项目初始化 commit 格式校验：部署 hook 和脚本，配置 core.hooksPath。"

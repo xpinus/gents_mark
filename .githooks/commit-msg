@@ -1,0 +1,54 @@
+#!/bin/sh
+# commit-msg hook — 约束 git commit 格式（Gitmoji + Conventional Commits）
+# 校验首行格式：<emoji> <type>: <中文描述>
+# 用法：git config core.hooksPath .githooks
+# 手动检查：printf '%s\n' "你的 message" | sh .githooks/commit-msg
+
+# 强制字节级匹配。grep 在 UTF-8 locale（C.UTF-8 / zh_CN.UTF-8 等）中
+# 对 emoji 的字符边界处理不一致，会导致合法 message 被误判，故统一用 C locale。
+export LC_ALL=C
+
+# 从文件（git 正常调用）或 stdin（手动检查）读取首行，并去掉可能的 CRLF
+if [ -n "${1:-}" ]; then
+  FIRST_LINE="$(sed -n '1p' "$1" 2>/dev/null)"
+else
+  FIRST_LINE="$(sed -n '1p')"
+fi
+FIRST_LINE="$(printf '%s' "$FIRST_LINE" | tr -d '\r')"
+
+# 豁免 Git 自动生成的提交
+case "$FIRST_LINE" in
+  Merge\ *|Revert\ *|"Merge branch"*) exit 0 ;;
+esac
+
+# emoji 与 type 必须严格配对
+VALID='^(✨ feat|🐛 fix|♻️ refactor|✅ test|📝 docs|🔧 chore|⚡ perf|💄 style): .+'
+
+if ! printf '%s\n' "$FIRST_LINE" | grep -Eq "$VALID"; then
+  cat >&2 <<'EOF'
+❌ commit message 格式错误！
+
+正确格式：<emoji> <type>: <中文描述>
+
+  ✨ feat: <描述>       新功能
+  🐛 fix: <描述>        修复bug
+  ♻️ refactor: <描述>   重构
+  ✅ test: <描述>       测试
+  📝 docs: <描述>       文档
+  🔧 chore: <描述>      构建/工具/依赖
+  ⚡ perf: <描述>       性能优化
+  💄 style: <描述>      代码风格/格式
+
+示例：✨ feat: 实现用户登录模块 (JIRA-123)
+
+EOF
+  exit 1
+fi
+
+# 描述句末不得以 . 或 。结尾
+if printf '%s\n' "$FIRST_LINE" | grep -Eq '[.。！!]$'; then
+  echo "❌ 描述句末不要加标点：$FIRST_LINE" >&2
+  exit 1
+fi
+
+exit 0
